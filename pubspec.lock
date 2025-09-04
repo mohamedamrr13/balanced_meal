@@ -275,6 +275,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  flutter_sha_fingerprint:
+    dependency: "direct main"
+    description:
+      name: flutter_sha_fingerprint
+      sha256: b691a0294f001e6be763858cfd97b3be09327ce49cdea6810a6efb1ff0b5d569
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.0"
   flutter_shaders:
     dependency: transitive
     description:
