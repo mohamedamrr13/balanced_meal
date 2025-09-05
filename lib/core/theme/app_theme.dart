@@ -12,6 +12,7 @@ class AppTheme {
 
   static ThemeData get lightTheme {
     return ThemeData(
+      fontFamily: 'Poppins',
       useMaterial3: true,
       colorScheme: const ColorScheme.light(
         primary: primaryColor,
