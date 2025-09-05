@@ -1,32 +1,15 @@
+import 'package:balanced_meal/core/models/user_data_model.dart';
 import 'package:flutter/material.dart';
 
-class UserData {
-  final String gender;
-  final double weight;
-  final double height;
-  final double age;
-  final double bmi;
-  final String bmiCategory;
-  final int bmr;
 
-  const UserData({
-    required this.gender,
-    required this.weight,
-    required this.height,
-    required this.age,
-    required this.bmi,
-    required this.bmiCategory,
-    required this.bmr,
-  });
-}
 
 class AppStateProvider extends ChangeNotifier {
-  UserData? _userData;
+  UserDataModel? _userData;
   int _currentMealCalories = 0;
   int _currentMealPrice = 0;
   bool _canSaveMeal = false;
 
-  UserData? get userData => _userData;
+  UserDataModel? get userData => _userData;
   int get currentMealCalories => _currentMealCalories;
   int get currentMealPrice => _currentMealPrice;
   bool get canSaveMeal => _canSaveMeal;
@@ -35,7 +18,7 @@ class AppStateProvider extends ChangeNotifier {
   double get userBMI => _userData?.bmi ?? 0;
   String get bmiCategory => _userData?.bmiCategory ?? '';
 
-  void setUserData(UserData userData) {
+  void setUserData(UserDataModel userData) {
     _userData = userData;
     _updateMealStatus();
     notifyListeners();

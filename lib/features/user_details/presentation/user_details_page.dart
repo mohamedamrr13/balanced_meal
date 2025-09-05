@@ -1,6 +1,8 @@
+import 'package:balanced_meal/core/models/user_data_model.dart';
 import 'package:balanced_meal/core/providers/app_state_providers.dart';
 import 'package:balanced_meal/core/utils/calorie_calculator.dart';
 import 'package:balanced_meal/core/widgets/app_button.dart';
+import 'package:balanced_meal/core/widgets/app_dropdown.dart';
 import 'package:balanced_meal/core/widgets/app_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -82,7 +84,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
 
       final bmiCategory = CaloriesCalculator.getBMICategory(bmi);
 
-      final userData = UserData(
+      final userData = UserDataModel(
         gender: _selectedGender!,
         weight: weight,
         height: height,
@@ -90,6 +92,8 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         bmi: bmi,
         bmiCategory: bmiCategory,
         bmr: bmr,
+        id: '',
+        createdAt: DateTime.now(),
       );
 
       context.read<AppStateProvider>().setUserData(userData);
@@ -116,7 +120,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
     }
   }
 
-  void _showResultsDialog(UserData userData) {
+  void _showResultsDialog(UserDataModel userData) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -165,12 +169,12 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Update Info'),
+            child: const Text(''),
           ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              context.go('/home');
+              context.push('/home');
             },
             child: const Text('Continue'),
           ),
@@ -268,23 +272,18 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                       const SizedBox(height: 24),
 
                       // Gender Dropdown
-                      Text(
-                        'Gender',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      DropdownButtonFormField<String>(
+                      AppCustomDropdown<String>(
+                        label: 'Gender',
+                        hintText: 'Choose your gender',
                         value: _selectedGender,
-                        hint: const Text('Choose your gender'),
-                        decoration: const InputDecoration(),
-                        items: ['Male', 'Female']
-                            .map((gender) => DropdownMenuItem(
-                                  value: gender,
-                                  child: Text(gender),
-                                ))
-                            .toList(),
+                        prefixIcon: Icon(
+                          Icons.person_outline,
+                          color: Colors.grey[600],
+                        ),
+                        items: const [
+                          CustomDropdownItem(value: 'Male', label: "Male"),
+                          CustomDropdownItem(value: 'Female', label: 'Female')
+                        ],
                         onChanged: (value) {
                           setState(() {
                             _selectedGender = value;

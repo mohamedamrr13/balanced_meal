@@ -1,4 +1,4 @@
-import 'package:balanced_meal/core/theme/app_theme.dart';
+import 'package:balanced_meal/core/models/user_data_model.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -35,7 +35,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-
+      
       await _auth.signInAnonymously();
     } catch (e) {
       debugPrint('Error signing in anonymously: $e');

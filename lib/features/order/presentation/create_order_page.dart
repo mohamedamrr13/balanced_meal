@@ -27,10 +27,32 @@ class CreateOrderPage extends StatefulWidget {
   State<CreateOrderPage> createState() => _CreateOrderPageState();
 }
 
-class _CreateOrderPageState extends State<CreateOrderPage> {
+class _CreateOrderPageState extends State<CreateOrderPage>
+    with TickerProviderStateMixin {
   final FirestoreService _firestoreService = FirestoreService();
   final Map<String, MealItem> _currentMeal = {};
   bool _isSaving = false;
+  late AnimationController _fabAnimationController;
+  late Animation<double> _fabAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _fabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _fabAnimation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+          parent: _fabAnimationController, curve: Curves.elasticOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _fabAnimationController.dispose();
+    super.dispose();
+  }
 
   void _addToMeal(FoodItemModel item) {
     final appState = context.read<AppStateProvider>();
@@ -43,11 +65,10 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
       itemCalories: item.calories,
       targetCalories: appState.userCalories,
     )) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Adding this item would exceed your calorie limit'),
-          backgroundColor: Colors.red,
-        ),
+      _showSnackBar(
+        'Adding this item would exceed your calorie limit',
+        Colors.red,
+        Icons.warning,
       );
       return;
     }
@@ -57,17 +78,15 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
         _currentMeal[item.id]!.quantity++;
       } else {
         _currentMeal[item.id] = MealItem(food: item);
+        _fabAnimationController.forward();
       }
     });
 
     _updateTotals();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('${item.foodName} added to meal'),
-        backgroundColor: Colors.green,
-        duration: const Duration(seconds: 1),
-      ),
+    _showSnackBar(
+      '${item.foodName} added to meal',
+      Colors.green,
+      Icons.check_circle,
     );
   }
 
@@ -78,6 +97,9 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
           _currentMeal[itemId]!.quantity--;
         } else {
           _currentMeal.remove(itemId);
+          if (_currentMeal.isEmpty) {
+            _fabAnimationController.reverse();
+          }
         }
       }
     });
@@ -99,33 +121,48 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
     setState(() {
       _currentMeal.clear();
     });
+    _fabAnimationController.reverse();
     _updateTotals();
+  }
+
+  void _showSnackBar(String message, Color color, IconData icon) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   Future<void> _saveMeal() async {
     if (_currentMeal.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please add some items to your meal first'),
-          backgroundColor: Colors.orange,
-        ),
+      _showSnackBar(
+        'Please add some items to your meal first',
+        Colors.orange,
+        Icons.info,
       );
       return;
     }
 
     final appState = context.read<AppStateProvider>();
     if (!appState.canSaveMeal) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Meal calories should be within 90-110% of your daily requirement'),
-          backgroundColor: Colors.orange,
-        ),
+      _showSnackBar(
+        'Meal calories should be within 90-110% of your daily requirement',
+        Colors.orange,
+        Icons.warning,
       );
       return;
     }
 
-    // Show meal name dialog
     final mealName = await _showMealNameDialog();
     if (mealName == null || mealName.isEmpty) return;
 
@@ -162,23 +199,20 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
       await _firestoreService.saveMeal(meal);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Meal saved successfully!'),
-            backgroundColor: Colors.green,
-          ),
+        _showSnackBar(
+          'Meal saved successfully!',
+          Colors.green,
+          Icons.check_circle,
         );
-
         _clearMeal();
         context.go('/home');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to save meal. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
+        _showSnackBar(
+          'Failed to save meal. Please try again.',
+          Colors.red,
+          Icons.error,
         );
       }
     } finally {
@@ -196,19 +230,41 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
     return showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Save Meal'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.restaurant_menu,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text('Save Meal'),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Give your meal a name:'),
-            const SizedBox(height: 16),
+            const Text('Give your meal a memorable name:'),
+            const SizedBox(height: 20),
             TextField(
               controller: controller,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'e.g., "Healthy Lunch", "Post-workout meal"',
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                prefixIcon: const Icon(Icons.edit),
               ),
               autofocus: true,
+              textCapitalization: TextCapitalization.words,
             ),
           ],
         ),
@@ -224,6 +280,11 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
                 Navigator.of(context).pop(name);
               }
             },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             child: const Text('Save'),
           ),
         ],
@@ -235,16 +296,23 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
     if (_currentMeal.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          colors: [
+            Colors.white,
+            Colors.grey[50]!,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -254,80 +322,134 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Current Meal',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
+                    child: Icon(
+                      Icons.restaurant,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Current Meal',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                  ),
+                ],
               ),
-              TextButton(
+              TextButton.icon(
                 onPressed: _clearMeal,
-                child: const Text('Clear All'),
+                icon: const Icon(Icons.clear_all, size: 18),
+                label: const Text('Clear'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red[400],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          ..._currentMeal.values.map((mealItem) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
+          const SizedBox(height: 16),
+          ...List.generate(_currentMeal.values.length, (index) {
+            final mealItem = _currentMeal.values.elementAt(index);
+            return AnimatedContainer(
+              duration: Duration(milliseconds: 300 + (index * 50)),
+              curve: Curves.easeOutBack,
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Row(
+                children: [
+                  Hero(
+                    tag: 'meal_item_${mealItem.food.id}',
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
                       child: Image.network(
                         mealItem.food.imageUrl,
-                        width: 40,
-                        height: 40,
+                        width: 50,
+                        height: 50,
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => Container(
-                          width: 40,
-                          height: 40,
-                          color: Colors.grey[300],
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(8),
+                          ),
                           child:
-                              const Icon(Icons.image_not_supported, size: 20),
+                              const Icon(Icons.image_not_supported, size: 24),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            mealItem.food.foodName,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w500,
-                                ),
-                          ),
-                          Text(
-                            '${mealItem.totalCalories} cal • \$${mealItem.totalPrice}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
-                    ),
-                    Row(
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        IconButton(
-                          onPressed: () => _removeFromMeal(mealItem.food.id),
-                          icon: const Icon(Icons.remove_circle_outline),
-                          constraints: const BoxConstraints(),
-                          padding: EdgeInsets.zero,
+                        Text(
+                          mealItem.food.foodName,
+                          style:
+                              Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                         ),
-                        Text('${mealItem.quantity}'),
-                        IconButton(
-                          onPressed: () => _addToMeal(mealItem.food),
-                          icon: const Icon(Icons.add_circle_outline),
-                          constraints: const BoxConstraints(),
-                          padding: EdgeInsets.zero,
+                        Text(
+                          '${mealItem.totalCalories} cal • \$${mealItem.totalPrice}',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
                         ),
                       ],
                     ),
-                  ],
-                ),
-              )),
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          onPressed: () => _removeFromMeal(mealItem.food.id),
+                          icon: const Icon(Icons.remove, size: 18),
+                          style: IconButton.styleFrom(
+                            minimumSize: const Size(32, 32),
+                          ),
+                        ),
+                        Text(
+                          '${mealItem.quantity}',
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        IconButton(
+                          onPressed: () => _addToMeal(mealItem.food),
+                          icon: const Icon(Icons.add, size: 18),
+                          style: IconButton.styleFrom(
+                            minimumSize: const Size(32, 32),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -338,37 +460,71 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w500,
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(2),
                 ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(height: 10),
         SizedBox(
-          height: 220,
+          height: 240,
           child: StreamBuilder<List<FoodItemModel>>(
             stream: stream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(
+                  child: CircularProgressIndicator(),
+                );
               }
 
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text('No items available'));
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.restaurant_menu,
+                        size: 48,
+                        color: Colors.grey[400],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'No items available',
+                        style: TextStyle(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                );
               }
 
               return ListView.builder(
                 scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 itemCount: snapshot.data!.length,
                 itemBuilder: (context, index) {
                   final item = snapshot.data![index];
-                  return FoodItemCard(
-                    item: item,
-                    onAddPressed: () => _addToMeal(item),
+                  return AnimatedContainer(
+                    duration: Duration(milliseconds: 300 + (index * 100)),
+                    curve: Curves.easeOutBack,
+                    child: FoodItemCard(
+                      item: item,
+                      onAddPressed: () => _addToMeal(item),
+                    ),
                   );
                 },
               );
@@ -382,18 +538,31 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Create Your Meal'),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text(
+          'Create Your Meal',
+          style: TextStyle(fontWeight: FontWeight.w700),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back_ios),
           onPressed: () => context.pop(),
         ),
         actions: [
           if (_currentMeal.isNotEmpty)
-            IconButton(
-              onPressed: _clearMeal,
-              icon: const Icon(Icons.clear_all),
-              tooltip: 'Clear meal',
+            ScaleTransition(
+              scale: _fabAnimation,
+              child: IconButton(
+                onPressed: _clearMeal,
+                icon: const Icon(Icons.clear_all),
+                tooltip: 'Clear meal',
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.red[50],
+                  foregroundColor: Colors.red[600],
+                ),
+              ),
             ),
         ],
       ),
@@ -404,73 +573,104 @@ class _CreateOrderPageState extends State<CreateOrderPage> {
               child: Column(
                 children: [
                   _buildCurrentMealSection(),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 8),
                   _buildFoodSection(
                       'Vegetables', _firestoreService.getVegetables()),
-                  const SizedBox(height: 24),
-                  _buildFoodSection('Meat', _firestoreService.getMeat()),
-                  const SizedBox(height: 24),
-                  _buildFoodSection('Carbs', _firestoreService.getCarbs()),
-                  const SizedBox(height: 50),
+                  const SizedBox(height: 32),
+                  _buildFoodSection(
+                      'Meat & Protein', _firestoreService.getMeat()),
+                  const SizedBox(height: 32),
+                  _buildFoodSection(
+                      'Carbohydrates', _firestoreService.getCarbs()),
+                  const SizedBox(height: 100),
                 ],
               ),
             ),
           ),
-          // Bottom Summary Section
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.all(24),
-            child: Consumer<AppStateProvider>(
-              builder: (context, appState, child) {
-                return Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Calories',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        Text(
-                          '${appState.currentMealCalories} / ${appState.userCalories} cal',
-                          style: TextStyle(
-                            color: appState.canSaveMeal
-                                ? Colors.green
-                                : const Color(0xFF959595),
-                            fontWeight: FontWeight.w500,
+        ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Consumer<AppStateProvider>(
+            builder: (context, appState, child) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Calories',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Total Price',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        Text(
-                          '\$${appState.currentMealPrice}',
-                          style: const TextStyle(
-                            color: Color(0xFFF25700),
-                            fontWeight: FontWeight.w600,
+                          Text(
+                            '${appState.currentMealCalories} / ${appState.userCalories}',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: appState.canSaveMeal
+                                  ? Colors.green[600]
+                                  : Colors.grey[600],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    AppButton(
-                      text: 'Save Meal',
+                        ],
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text(
+                            'Total Price',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            '\$${appState.currentMealPrice}',
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFF25700),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    child: AppButton(
+                      text: _isSaving ? 'Saving...' : 'Save Meal',
                       onPressed: _currentMeal.isNotEmpty ? _saveMeal : null,
                       isLoading: _isSaving,
                     ),
-                  ],
-                );
-              },
-            ),
+                  ),
+                ],
+              );
+            },
           ),
-        ],
+        ),
       ),
     );
   }
