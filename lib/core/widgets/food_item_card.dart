@@ -451,7 +451,7 @@ class _FoodItemCardState extends State<FoodItemCard>
                                         borderRadius: BorderRadius.circular(12),
                                         onTap: _onAddPressed,
                                         child: widget.isAddingToCart
-                                            ? Center(
+                                            ? const Center(
                                                 child: SizedBox(
                                                   width: 16,
                                                   height: 16,

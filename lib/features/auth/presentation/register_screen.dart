@@ -53,27 +53,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 32),
-
-                  // Welcome section
-                  Text(
-                    'Create Account',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      color: colorScheme.onBackground,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 24,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Start your journey to healthier eating habits',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: const Color(
-                          0xFF959595), // AppTheme.textSecondaryColor
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-
                   Container(
                     constraints:
                         const BoxConstraints(maxWidth: double.infinity),
@@ -237,7 +216,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   if (state is GoogleSuccess) {
                                     setState(() => isEnabled = true);
                                     // Navigate to user details for new Google users
-                                    context.go(AppRouter.userDetailsName);
+                                    context.go(AppRouter.userDetailsRoute);
                                   }
                                   if (state is GoogleFailure) {
                                     setState(() => isEnabled = true);

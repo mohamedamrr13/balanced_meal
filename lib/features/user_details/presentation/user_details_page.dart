@@ -1,5 +1,8 @@
-import 'package:balanced_meal/core/models/user_data_model.dart';
+// lib/features/user_details/presentation/user_details_page.dart
+import 'package:balanced_meal/core/models/user_data_model.dart'
+    show UserDataModel;
 import 'package:balanced_meal/core/providers/app_state_providers.dart';
+import 'package:balanced_meal/core/providers/auth_provider.dart';
 import 'package:balanced_meal/core/utils/calorie_calculator.dart';
 import 'package:balanced_meal/core/widgets/app_button.dart';
 import 'package:balanced_meal/core/widgets/app_dropdown.dart';
@@ -23,6 +26,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
 
   String? _selectedGender;
   bool _isLoading = false;
+  bool _isExistingUser = false;
 
   @override
   void initState() {
@@ -33,10 +37,13 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
   void _loadExistingData() {
     final userData = context.read<AppStateProvider>().userData;
     if (userData != null) {
-      _selectedGender = userData.gender;
-      _weightController.text = userData.weight.toString();
-      _heightController.text = userData.height.toString();
-      _ageController.text = userData.age.toString();
+      setState(() {
+        _isExistingUser = true;
+        _selectedGender = userData.gender;
+        _weightController.text = userData.weight.toString();
+        _heightController.text = userData.height.toString();
+        _ageController.text = userData.age.toString();
+      });
     }
   }
 
@@ -84,29 +91,31 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
 
       final bmiCategory = CaloriesCalculator.getBMICategory(bmi);
 
-      final userData = UserDataModel(
+      final userData = UserDataModel.create(
+        id: context.read<AuthProvider>().user?.uid ?? '',
         gender: _selectedGender!,
         weight: weight,
         height: height,
         age: age,
-        bmi: bmi,
-        bmiCategory: bmiCategory,
-        bmr: bmr,
-        id: '',
-        createdAt: DateTime.now(),
       );
 
-      context.read<AppStateProvider>().setUserData(userData);
+      // Save to Firestore and update app state
+      await context
+          .read<AuthProvider>()
+          .saveUserData(userData, context.read<AppStateProvider>());
 
-      // Show results dialog
       if (mounted) {
-        _showResultsDialog(userData);
+        if (_isExistingUser) {
+          _showUpdateSuccessDialog();
+        } else {
+          _showResultsDialog(userData);
+        }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error calculating data. Please check your inputs.'),
+          SnackBar(
+            content: Text('Error saving data: ${e.toString()}'),
             backgroundColor: Colors.red,
           ),
         );
@@ -118,6 +127,32 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         });
       }
     }
+  }
+
+  void _showUpdateSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green),
+            SizedBox(width: 8),
+            Text('Profile Updated'),
+          ],
+        ),
+        content:
+            const Text('Your health profile has been updated successfully!'),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.go('/home');
+            },
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showResultsDialog(UserDataModel userData) {
@@ -167,14 +202,10 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
           ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text(''),
-          ),
           ElevatedButton(
             onPressed: () {
               Navigator.of(context).pop();
-              context.push('/home');
+              context.go('/home');
             },
             child: const Text('Continue'),
           ),
@@ -230,7 +261,8 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Enter your details'),
+        title: Text(_isExistingUser ? 'Update Profile' : 'Enter your details'),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       ),
       body: Form(
         key: _formKey,
@@ -263,7 +295,9 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
                             ),
                             const SizedBox(height: 8),
                             Text(
-                              'We\'ll calculate your BMI and daily calorie needs based on this information.',
+                              _isExistingUser
+                                  ? 'Update your information to recalculate your BMI and daily calorie needs.'
+                                  : 'We\'ll calculate your BMI and daily calorie needs based on this information.',
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ],
@@ -362,7 +396,8 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
               ),
               const SizedBox(height: 15),
               AppButton(
-                text: 'Calculate & Continue',
+                text:
+                    _isExistingUser ? 'Update Profile' : 'Calculate & Continue',
                 onPressed: _isFormValid ? _calculateAndProceed : null,
                 isLoading: _isLoading,
               ),

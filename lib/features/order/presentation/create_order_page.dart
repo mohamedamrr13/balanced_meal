@@ -1,4 +1,5 @@
 import 'package:balanced_meal/core/models/food_model.dart';
+import 'package:balanced_meal/core/models/meal_model.dart';
 import 'package:balanced_meal/core/providers/app_state_providers.dart';
 import 'package:balanced_meal/core/providers/auth_provider.dart';
 import 'package:balanced_meal/core/services/firestore_service.dart';
@@ -6,38 +7,40 @@ import 'package:balanced_meal/core/utils/calorie_calculator.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
-
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/food_item_card.dart';
 
-class MealItem {
-  final FoodItemModel food;
-  int quantity;
 
-  MealItem({required this.food, this.quantity = 1});
 
-  int get totalCalories => food.calories * quantity;
-  int get totalPrice => food.price * quantity;
-}
-
-class CreateOrderPage extends StatefulWidget {
-  const CreateOrderPage({super.key});
+class CreateMealPage extends StatefulWidget {
+  const CreateMealPage({super.key});
 
   @override
-  State<CreateOrderPage> createState() => _CreateOrderPageState();
+  State<CreateMealPage> createState() => _CreateMealPageState();
 }
 
-class _CreateOrderPageState extends State<CreateOrderPage>
-    with TickerProviderStateMixin {
+class _CreateMealPageState extends State<CreateMealPage>
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   final FirestoreService _firestoreService = FirestoreService();
   final Map<String, MealItem> _currentMeal = {};
+  final Map<String, bool> _addingStates =
+      {}; // Track individual item loading states
   bool _isSaving = false;
   late AnimationController _fabAnimationController;
   late Animation<double> _fabAnimation;
 
+  // Cache for food streams to prevent unnecessary rebuilds
+  late Stream<List<FoodItemModel>> _vegetablesStream;
+  late Stream<List<FoodItemModel>> _meatStream;
+  late Stream<List<FoodItemModel>> _carbsStream;
+
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   void initState() {
     super.initState();
+    _initializeStreams();
     _fabAnimationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -48,13 +51,26 @@ class _CreateOrderPageState extends State<CreateOrderPage>
     );
   }
 
+  void _initializeStreams() {
+    _vegetablesStream = _firestoreService.getVegetables();
+    _meatStream = _firestoreService.getMeat();
+    _carbsStream = _firestoreService.getCarbs();
+  }
+
   @override
   void dispose() {
     _fabAnimationController.dispose();
     super.dispose();
   }
 
-  void _addToMeal(FoodItemModel item) {
+  void _addToMeal(FoodItemModel item) async {
+    // Prevent multiple rapid taps
+    if (_addingStates[item.id] == true) return;
+
+    setState(() {
+      _addingStates[item.id] = true;
+    });
+
     final appState = context.read<AppStateProvider>();
 
     final currentTotalCalories = _currentMeal.values
@@ -70,24 +86,33 @@ class _CreateOrderPageState extends State<CreateOrderPage>
         Colors.red,
         Icons.warning,
       );
+      setState(() {
+        _addingStates[item.id] = false;
+      });
       return;
     }
 
-    setState(() {
-      if (_currentMeal.containsKey(item.id)) {
-        _currentMeal[item.id]!.quantity++;
-      } else {
-        _currentMeal[item.id] = MealItem(food: item);
-        _fabAnimationController.forward();
-      }
-    });
+    // Add small delay to show loading state
+    await Future.delayed(const Duration(milliseconds: 200));
 
-    _updateTotals();
-    _showSnackBar(
-      '${item.foodName} added to meal',
-      Colors.green,
-      Icons.check_circle,
-    );
+    if (mounted) {
+      setState(() {
+        if (_currentMeal.containsKey(item.id)) {
+          _currentMeal[item.id]!.quantity++;
+        } else {
+          _currentMeal[item.id] = MealItem(food: item);
+          _fabAnimationController.forward();
+        }
+        _addingStates[item.id] = false;
+      });
+
+      _updateTotals();
+      _showSnackBar(
+        '${item.foodName} added to meal',
+        Colors.green,
+        Icons.check_circle,
+      );
+    }
   }
 
   void _removeFromMeal(String itemId) {
@@ -120,12 +145,15 @@ class _CreateOrderPageState extends State<CreateOrderPage>
   void _clearMeal() {
     setState(() {
       _currentMeal.clear();
+      _addingStates.clear();
     });
     _fabAnimationController.reverse();
     _updateTotals();
   }
 
   void _showSnackBar(String message, Color color, IconData icon) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -174,6 +202,10 @@ class _CreateOrderPageState extends State<CreateOrderPage>
       final authProvider = context.read<AuthProvider>();
       final userId = authProvider.user?.uid ?? '';
 
+      if (userId.isEmpty) {
+        throw Exception('User not logged in');
+      }
+
       final mealItems = _currentMeal.values
           .map((mealItem) => SavedMealItemModel(
                 id: mealItem.food.id,
@@ -210,7 +242,7 @@ class _CreateOrderPageState extends State<CreateOrderPage>
     } catch (e) {
       if (mounted) {
         _showSnackBar(
-          'Failed to save meal. Please try again.',
+          'Failed to save meal: ${e.toString()}',
           Colors.red,
           Icons.error,
         );
@@ -299,14 +331,7 @@ class _CreateOrderPageState extends State<CreateOrderPage>
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.white,
-            Colors.grey[50]!,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -367,9 +392,11 @@ class _CreateOrderPageState extends State<CreateOrderPage>
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).scaffoldBackgroundColor,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey[200]!),
+                border: Border.all(
+                  color: Theme.of(context).dividerColor,
+                ),
               ),
               child: Row(
                 children: [
@@ -411,7 +438,10 @@ class _CreateOrderPageState extends State<CreateOrderPage>
                           '${mealItem.totalCalories} cal • \$${mealItem.totalPrice}',
                           style:
                               Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey[600],
+                                    color: Theme.of(context)
+                                        .textTheme
+                                        .bodySmall
+                                        ?.color,
                                   ),
                         ),
                       ],
@@ -419,7 +449,7 @@ class _CreateOrderPageState extends State<CreateOrderPage>
                   ),
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -518,12 +548,15 @@ class _CreateOrderPageState extends State<CreateOrderPage>
                 itemCount: snapshot.data!.length,
                 itemBuilder: (context, index) {
                   final item = snapshot.data![index];
+                  final isAdding = _addingStates[item.id] ?? false;
+
                   return AnimatedContainer(
                     duration: Duration(milliseconds: 300 + (index * 100)),
                     curve: Curves.easeOutBack,
                     child: FoodItemCard(
                       item: item,
                       onAddPressed: () => _addToMeal(item),
+                      isAddingToCart: isAdding,
                     ),
                   );
                 },
@@ -537,8 +570,10 @@ class _CreateOrderPageState extends State<CreateOrderPage>
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -574,14 +609,11 @@ class _CreateOrderPageState extends State<CreateOrderPage>
                 children: [
                   _buildCurrentMealSection(),
                   const SizedBox(height: 8),
-                  _buildFoodSection(
-                      'Vegetables', _firestoreService.getVegetables()),
+                  _buildFoodSection('Vegetables', _vegetablesStream),
                   const SizedBox(height: 32),
-                  _buildFoodSection(
-                      'Meat & Protein', _firestoreService.getMeat()),
+                  _buildFoodSection('Meat & Protein', _meatStream),
                   const SizedBox(height: 32),
-                  _buildFoodSection(
-                      'Carbohydrates', _firestoreService.getCarbs()),
+                  _buildFoodSection('Carbohydrates', _carbsStream),
                   const SizedBox(height: 100),
                 ],
               ),
@@ -592,7 +624,7 @@ class _CreateOrderPageState extends State<CreateOrderPage>
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           boxShadow: [
             BoxShadow(
@@ -662,7 +694,9 @@ class _CreateOrderPageState extends State<CreateOrderPage>
                     duration: const Duration(milliseconds: 300),
                     child: AppButton(
                       text: _isSaving ? 'Saving...' : 'Save Meal',
-                      onPressed: _currentMeal.isNotEmpty ? _saveMeal : null,
+                      onPressed: _currentMeal.isNotEmpty && !_isSaving
+                          ? _saveMeal
+                          : null,
                       isLoading: _isSaving,
                     ),
                   ),

@@ -77,7 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             setState(() => isEnabled = false);
                           }
                           if (state is LoginSuccess) {
-                            context.go(AppRouter.homeRoute);
+                            context.go(AppRouter.userDetailsRoute);
                           }
                           if (state is LoginFailure) {
                             setState(() => isEnabled = true);
@@ -183,7 +183,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   }
                                   if (state is GoogleSuccess) {
                                     setState(() => isEnabled = true);
-                                    context.go(AppRouter.homeRoute);
+                                    context.go(AppRouter.userDetailsRoute);
                                   }
                                   if (state is GoogleFailure) {
                                     setState(() => isEnabled = true);

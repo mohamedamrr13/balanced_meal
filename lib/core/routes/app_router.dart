@@ -73,7 +73,7 @@ class AppRouter {
       GoRoute(
         path: createOrderRoute,
         name: createOrderName,
-        builder: (context, state) => const CreateOrderPage(),
+        builder: (context, state) => const CreateMealPage(),
       ),
       GoRoute(
         path: savedMealsRoute,

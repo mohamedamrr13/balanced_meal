@@ -1,10 +1,15 @@
 // lib/features/home/presentation/home_page.dart
+import 'package:balanced_meal/core/providers/theme_provider.dart';
+import 'package:balanced_meal/core/routes/app_router.dart';
+import 'package:balanced_meal/features/home/presentation/custom_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/providers/app_state_providers.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/utils/calorie_calculator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/providers/auth_provider.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -144,18 +149,28 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+     // Then replace the AppBar:
       appBar: AppBar(
         title: const Text(
           'Balanced Meal',
-          style: TextStyle(fontSize: 22),
+          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
         ),
-        actions: [
-          IconButton(
-            onPressed: () => context.push('/user-details'),
-            icon: const Icon(Icons.settings),
+        centerTitle: false,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        elevation: 0,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(
+              Icons.menu,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+            onPressed: () => Scaffold.of(context).openDrawer(),
           ),
-        ],
+        ),
       ),
+
+// And add the drawer to your Scaffold:
+      drawer: const CustomDrawer(),
       body: Consumer<AppStateProvider>(
         builder: (context, appState, child) {
           final userData = appState.userData;
