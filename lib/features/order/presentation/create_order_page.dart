@@ -22,6 +22,7 @@ class _CreateMealPageState extends State<CreateMealPage>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   final FirestoreService _firestoreService = FirestoreService();
   final Map<String, MealItem> _currentMeal = {};
+  final ScrollController _scrollController = ScrollController();
   final Map<String, bool> _addingStates =
       {}; // Track individual item loading states
   bool _isSaving = false;
@@ -58,6 +59,7 @@ class _CreateMealPageState extends State<CreateMealPage>
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _fabAnimationController.dispose();
     super.dispose();
   }
@@ -91,8 +93,11 @@ class _CreateMealPageState extends State<CreateMealPage>
       return;
     }
 
-    // Add small delay to show loading state
-    await Future.delayed(const Duration(milliseconds: 200));
+    // Store scroll position before adding item to prevent auto-scroll
+    final scrollPosition = _scrollController.hasClients ? _scrollController.offset : 0.0;
+
+    // Small delay to show loading state
+    await Future.delayed(const Duration(milliseconds: 150));
 
     if (mounted) {
       setState(() {
@@ -103,6 +108,13 @@ class _CreateMealPageState extends State<CreateMealPage>
           _fabAnimationController.forward();
         }
         _addingStates[item.id] = false;
+      });
+
+      // Restore scroll position after state update to prevent auto-scroll
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients && scrollPosition > 0) {
+          _scrollController.jumpTo(scrollPosition);
+        }
       });
 
       _updateTotals();
@@ -214,6 +226,9 @@ class _CreateMealPageState extends State<CreateMealPage>
                 price: mealItem.food.price,
                 category: mealItem.food.category,
                 quantity: mealItem.quantity,
+                protein: mealItem.food.protein,
+                carbs: mealItem.food.carbs,
+                fat: mealItem.food.fat,
               ))
           .toList();
 
@@ -257,6 +272,7 @@ class _CreateMealPageState extends State<CreateMealPage>
 
   Future<String?> _showMealNameDialog() async {
     final controller = TextEditingController();
+    final theme = Theme.of(context);
 
     return showDialog<String>(
       context: context,
@@ -302,6 +318,9 @@ class _CreateMealPageState extends State<CreateMealPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -604,6 +623,7 @@ class _CreateMealPageState extends State<CreateMealPage>
         children: [
           Expanded(
             child: SingleChildScrollView(
+              controller: _scrollController,
               child: Column(
                 children: [
                   _buildCurrentMealSection(),

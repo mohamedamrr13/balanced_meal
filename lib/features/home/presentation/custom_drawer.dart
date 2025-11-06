@@ -1,6 +1,7 @@
 // lib/core/widgets/custom_drawer.dart
 import 'package:balanced_meal/core/models/user_data_model.dart';
 import 'package:balanced_meal/core/providers/app_state_providers.dart';
+import 'package:balanced_meal/core/providers/auth_provider.dart';
 import 'package:balanced_meal/core/providers/theme_provider.dart';
 import 'package:balanced_meal/core/routes/app_router.dart';
 import 'package:flutter/material.dart';

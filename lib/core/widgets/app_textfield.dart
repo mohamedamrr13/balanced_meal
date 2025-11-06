@@ -70,10 +70,13 @@ class _AppTextFieldState extends State<AppTextField>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Initialize theme-dependent animations here
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Initialize theme-dependent animations here with theme-aware colors
     _borderColorAnimation = ColorTween(
-      begin: Colors.grey[300],
-      end: Theme.of(context).colorScheme.primary,
+      begin: isDark ? theme.colorScheme.outline : theme.colorScheme.outline.withOpacity(0.5),
+      end: theme.colorScheme.primary,
     ).animate(_animationController);
   }
 
@@ -100,6 +103,7 @@ class _AppTextFieldState extends State<AppTextField>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final hasText = widget.controller?.text.isNotEmpty ?? false;
     final shouldShowFloatingLabel =
         widget.useFloatingLabel && (hasText || _isFocused);
@@ -114,7 +118,9 @@ class _AppTextFieldState extends State<AppTextField>
               fontWeight: FontWeight.w600,
               color: _isFocused
                   ? theme.colorScheme.primary
-                  : (_hasError ? Colors.red[600] : Colors.grey[700]),
+                  : (_hasError
+                      ? theme.colorScheme.error
+                      : theme.textTheme.bodyMedium?.color),
             ),
             child: Text(widget.label!),
           ),
@@ -162,6 +168,7 @@ class _AppTextFieldState extends State<AppTextField>
                     enabled: widget.enabled,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w500,
+                      color: theme.textTheme.bodyLarge?.color,
                     ),
                     decoration: InputDecoration(
                       hintText: widget.useFloatingLabel
@@ -170,7 +177,7 @@ class _AppTextFieldState extends State<AppTextField>
                               : widget.label ?? widget.hintText)
                           : widget.hintText,
                       hintStyle: TextStyle(
-                        color: Colors.grey[400],
+                        color: theme.hintColor,
                         fontWeight: FontWeight.w400,
                       ),
                       prefixIcon: widget.prefixIcon != null
@@ -190,8 +197,10 @@ class _AppTextFieldState extends State<AppTextField>
                           (widget.enabled
                               ? (_isFocused
                                   ? theme.colorScheme.primary.withOpacity(0.05)
-                                  : Colors.grey[50])
-                              : Colors.grey[100]),
+                                  : (isDark
+                                      ? theme.colorScheme.surfaceContainerHighest
+                                      : theme.colorScheme.surfaceContainerHighest.withOpacity(0.5)))
+                              : theme.colorScheme.surfaceContainerHighest.withOpacity(0.3)),
                       contentPadding: EdgeInsets.symmetric(
                         horizontal: widget.prefixIcon != null ? 12 : 16,
                         vertical: widget.maxLines == 1 ? 16 : 12,
@@ -200,7 +209,7 @@ class _AppTextFieldState extends State<AppTextField>
                         borderRadius:
                             BorderRadius.circular(widget.borderRadius),
                         borderSide: BorderSide(
-                          color: Colors.grey[300]!,
+                          color: theme.colorScheme.outline,
                           width: 1.5,
                         ),
                       ),
@@ -208,7 +217,7 @@ class _AppTextFieldState extends State<AppTextField>
                         borderRadius:
                             BorderRadius.circular(widget.borderRadius),
                         borderSide: BorderSide(
-                          color: Colors.grey[300]!,
+                          color: theme.colorScheme.outline,
                           width: 1.5,
                         ),
                       ),
@@ -225,7 +234,7 @@ class _AppTextFieldState extends State<AppTextField>
                         borderRadius:
                             BorderRadius.circular(widget.borderRadius),
                         borderSide: BorderSide(
-                          color: Colors.red[400]!,
+                          color: theme.colorScheme.error.withOpacity(0.7),
                           width: 1.5,
                         ),
                       ),
@@ -233,7 +242,7 @@ class _AppTextFieldState extends State<AppTextField>
                         borderRadius:
                             BorderRadius.circular(widget.borderRadius),
                         borderSide: BorderSide(
-                          color: Colors.red[600]!,
+                          color: theme.colorScheme.error,
                           width: 2,
                         ),
                       ),
@@ -241,13 +250,13 @@ class _AppTextFieldState extends State<AppTextField>
                         borderRadius:
                             BorderRadius.circular(widget.borderRadius),
                         borderSide: BorderSide(
-                          color: Colors.grey[200]!,
+                          color: theme.colorScheme.outline.withOpacity(0.3),
                           width: 1,
                         ),
                       ),
                       counterText: widget.showCharacterCounter ? null : '',
                       errorStyle: TextStyle(
-                        color: Colors.red[600],
+                        color: theme.colorScheme.error,
                         fontWeight: FontWeight.w500,
                         fontSize: 12,
                       ),
@@ -280,9 +289,9 @@ class _AppTextFieldState extends State<AppTextField>
                               fontWeight: FontWeight.w600,
                               color: shouldShowFloatingLabel
                                   ? (_hasError
-                                      ? Colors.red[600]
+                                      ? theme.colorScheme.error
                                       : theme.colorScheme.primary)
-                                  : Colors.grey[400],
+                                  : theme.hintColor,
                             ),
                           ),
                         ),
@@ -305,8 +314,8 @@ class _AppTextFieldState extends State<AppTextField>
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: (widget.controller?.text.length ?? 0) >
                             widget.maxLength!
-                        ? Colors.red[600]
-                        : Colors.grey[500],
+                        ? theme.colorScheme.error
+                        : theme.textTheme.bodySmall?.color?.withOpacity(0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
