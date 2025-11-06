@@ -153,13 +153,73 @@ class _CreateMealPageState extends State<CreateMealPage>
         .updateMealTotals(totalCalories, totalPrice);
   }
 
-  void _clearMeal() {
-    setState(() {
-      _currentMeal.clear();
-      _addingStates.clear();
-    });
-    _fabAnimationController.reverse();
-    _updateTotals();
+  Future<void> _clearMeal() async {
+    final confirmed = await _showClearMealConfirmation();
+    if (confirmed == true) {
+      setState(() {
+        _currentMeal.clear();
+        _addingStates.clear();
+      });
+      _fabAnimationController.reverse();
+      _updateTotals();
+      _showSnackBar(
+        'Meal cleared successfully',
+        Colors.orange,
+        Icons.clear_all,
+      );
+    }
+  }
+
+  Future<bool?> _showClearMealConfirmation() async {
+    final theme = Theme.of(context);
+
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.warning_rounded,
+                color: Colors.red,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text('Clear Meal?'),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to clear all items from your current meal? This action cannot be undone.',
+          style: TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSnackBar(String message, Color color, IconData icon) {
