@@ -409,12 +409,12 @@ class _EditForm extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        AppDropdown<String>(
+        AppCustomDropdown<String>(
           label: 'Gender',
           value: selectedGender,
           items: const [
-            DropdownMenuItem(value: 'Male', child: Text('Male')),
-            DropdownMenuItem(value: 'Female', child: Text('Female')),
+            CustomDropdownItem(value: 'Male', label: 'Male'),
+            CustomDropdownItem(value: 'Female', label: 'Female'),
           ],
           onChanged: onGenderChanged,
         ),
@@ -549,7 +549,8 @@ class _BMIInfoCard extends StatelessWidget {
                 ),
                 child: Column(
                   children: [
-                    Icon(Icons.local_fire_department, color: bmiColor, size: 32),
+                    Icon(Icons.local_fire_department,
+                        color: bmiColor, size: 32),
                     const SizedBox(height: 8),
                     Text(
                       '${userData.bmr} kcal',

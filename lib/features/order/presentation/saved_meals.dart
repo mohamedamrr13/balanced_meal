@@ -1,3 +1,4 @@
+import 'package:balanced_meal/core/models/saved_meal_model.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';

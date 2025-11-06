@@ -1,5 +1,6 @@
 import 'package:balanced_meal/core/models/food_model.dart';
 import 'package:balanced_meal/core/models/meal_model.dart';
+import 'package:balanced_meal/core/models/saved_meal_model.dart';
 import 'package:balanced_meal/core/providers/app_state_providers.dart';
 import 'package:balanced_meal/core/providers/auth_provider.dart';
 import 'package:balanced_meal/core/services/firestore_service.dart';
@@ -9,8 +10,6 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/food_item_card.dart';
-
-
 
 class CreateMealPage extends StatefulWidget {
   const CreateMealPage({super.key});

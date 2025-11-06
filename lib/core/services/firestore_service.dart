@@ -113,7 +113,7 @@ class FirestoreService {
   /// [userId] - The user ID to filter by
   /// [limit] - Maximum number of meals to fetch
   /// [lastDocument] - Last document from previous query (for pagination)
-  Future<({List<SavedMealModel> meals, DocumentSnapshot? lastDoc})>
+  Future<({QueryDocumentSnapshot<Object?>? lastDoc, List meals})>
       getSavedMealsPaginated({
     required String userId,
     int limit = 20,
