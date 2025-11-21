@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-// Updated UserModel with UserData integration
 class UserModel {
   final String? uid;
   final String? email;
@@ -10,7 +9,7 @@ class UserModel {
   final String? photoUrl;
   final String? phoneNumber;
   final bool emailVerified;
-  final UserDataModel? userData; // Added user health data
+  final UserDataModel? userData;
 
   const UserModel({
     this.uid,
@@ -30,8 +29,8 @@ class UserModel {
       photoUrl: map['photoUrl'],
       phoneNumber: map['phoneNumber'],
       emailVerified: map['emailVerified'] ?? false,
-      userData: map['userData'] != null
-          ? UserDataModel.fromFirestore(map['userData'], map['uid'] ?? '')
+      userData: map['userData'] != null && map['uid'] != null
+          ? UserDataModel.fromFirestore(map['userData'], map['uid'])
           : null,
     );
   }
@@ -48,7 +47,6 @@ class UserModel {
     };
   }
 
-  // Helper method to create a copy with updated userData
   UserModel copyWith({
     String? uid,
     String? email,
@@ -74,7 +72,6 @@ class UserModel {
   bool get isProfileComplete => isLoggedIn && hasUserData;
 }
 
-// UserDataModel remains the same but with added helper methods
 class UserDataModel {
   final String id;
   final String gender;
@@ -99,6 +96,16 @@ class UserDataModel {
   });
 
   factory UserDataModel.fromFirestore(Map<String, dynamic> data, String id) {
+    DateTime createdAt;
+    final createdAtRaw = data['created_at'];
+    if (createdAtRaw is Timestamp) {
+      createdAt = createdAtRaw.toDate();
+    } else if (createdAtRaw is DateTime) {
+      createdAt = createdAtRaw;
+    } else {
+      createdAt = DateTime.now();
+    }
+
     return UserDataModel(
       id: id,
       gender: data['gender'] ?? '',
@@ -108,7 +115,7 @@ class UserDataModel {
       bmi: (data['bmi'] ?? 0).toDouble(),
       bmiCategory: data['bmi_category'] ?? '',
       bmr: data['bmr'] ?? 0,
-      createdAt: (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: createdAt,
     );
   }
 
@@ -125,7 +132,6 @@ class UserDataModel {
     };
   }
 
-  // Helper methods for health calculations
   static double calculateBMI(double weight, double height) {
     if (height <= 0) return 0;
     return weight / ((height / 100) * (height / 100));
@@ -140,14 +146,12 @@ class UserDataModel {
 
   static int calculateBMR(
       double weight, double height, double age, String gender) {
-    // Mifflin-St Jeor Equation
     double bmr = (10 * weight) + (6.25 * height) - (5 * age);
     return gender.toLowerCase() == 'male'
         ? (bmr + 5).round()
         : (bmr - 161).round();
   }
 
-  // Factory constructor for creating UserDataModel with calculations
   factory UserDataModel.create({
     required String id,
     required String gender,
@@ -194,135 +198,5 @@ class UserDataModel {
       bmr: bmr ?? this.bmr,
       createdAt: createdAt ?? this.createdAt,
     );
-  }
-}
-
-// Updated AuthProvider with UserData integration
-class AuthProvider extends ChangeNotifier {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  UserModel? _user;
-  bool _isLoading = false;
-  String? _error;
-
-  UserModel? get user => _user;
-  bool get isLoading => _isLoading;
-  bool get isLoggedIn => _user?.isLoggedIn ?? false;
-  bool get hasUserData => _user?.hasUserData ?? false;
-  bool get isProfileComplete => _user?.isProfileComplete ?? false;
-  String? get error => _error;
-
-  AuthProvider() {
-    _auth.authStateChanges().listen(_onAuthStateChanged);
-  }
-
-  void _onAuthStateChanged(User? firebaseUser) async {
-    if (firebaseUser != null) {
-      // Load user data from Firestore
-      await _loadUserData(firebaseUser);
-    } else {
-      _user = null;
-    }
-    notifyListeners();
-  }
-
-  Future<void> _loadUserData(User firebaseUser) async {
-    try {
-      _user = UserModel(
-        uid: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: firebaseUser.displayName,
-        photoUrl: firebaseUser.photoURL,
-        phoneNumber: firebaseUser.phoneNumber,
-        emailVerified: firebaseUser.emailVerified,
-      );
-
-      // Try to load user health data from Firestore
-      final userDataDoc = await _firestore
-          .collection('users')
-          .doc(firebaseUser.uid)
-          .collection('health_data')
-          .doc('current')
-          .get();
-
-      if (userDataDoc.exists) {
-        final userData = UserDataModel.fromFirestore(
-          userDataDoc.data()!,
-          firebaseUser.uid,
-        );
-        _user = _user!.copyWith(userData: userData);
-      }
-    } catch (e) {
-      debugPrint('Error loading user data: $e');
-      _error = 'Failed to load user data';
-    }
-  }
-
-  Future<void> saveUserData(UserDataModel userData) async {
-    if (_user == null) throw Exception('User not logged in');
-
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      // Save to Firestore
-      await _firestore
-          .collection('users')
-          .doc(_user!.uid)
-          .collection('health_data')
-          .doc('current')
-          .set(userData.toFirestore());
-
-      // Update local user model
-      _user = _user!.copyWith(userData: userData);
-    } catch (e) {
-      debugPrint('Error saving user data: $e');
-      _error = 'Failed to save user data';
-      rethrow;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> signInAnonymously() async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      await _auth.signInAnonymously();
-    } catch (e) {
-      debugPrint('Error signing in anonymously: $e');
-      _error = 'Failed to sign in';
-      rethrow;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  Future<void> signOut() async {
-    try {
-      _isLoading = true;
-      _error = null;
-      notifyListeners();
-
-      await _auth.signOut();
-    } catch (e) {
-      debugPrint('Error signing out: $e');
-      _error = 'Failed to sign out';
-      rethrow;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
-    }
-  }
-
-  void clearError() {
-    _error = null;
-    notifyListeners();
   }
 }

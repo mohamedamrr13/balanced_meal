@@ -636,45 +636,6 @@ class _SavedMealsPageState extends State<SavedMealsPage>
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    Theme.of(context).colorScheme.primary,
-                    Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: [
-                  BoxShadow(
-                    color:
-                        Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: ElevatedButton.icon(
-                onPressed: () => context.push('/create-order'),
-                icon: const Icon(Icons.add, color: Colors.white),
-                label: const Text(
-                  'Create Your First Meal',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -715,11 +676,17 @@ class _SavedMealsPageState extends State<SavedMealsPage>
                   child: CircularProgressIndicator(),
                 );
               }
-
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text(
+                    'Error loading meals: ${snapshot.error}',
+                    style: TextStyle(color: Colors.red[600]),
+                  ),
+                );
+              }
               if (!snapshot.hasData || snapshot.data!.isEmpty) {
                 return _buildEmptyState();
               }
-
               final meals = snapshot.data!;
 
               return Column(

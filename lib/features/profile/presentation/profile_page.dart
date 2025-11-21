@@ -1,3 +1,5 @@
+import 'package:balanced_meal/core/providers/app_state_providers.dart';
+import 'package:balanced_meal/core/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:balanced_meal/core/models/user_data_model.dart';
@@ -79,7 +81,8 @@ class _ProfilePageState extends State<ProfilePage> {
         age: double.parse(_ageController.text),
       );
 
-      await authProvider.saveUserData(userData);
+      await authProvider.saveUserData(
+          userData, Provider.of<AppStateProvider>(context, listen: false));
 
       if (mounted) {
         setState(() => _isEditing = false);

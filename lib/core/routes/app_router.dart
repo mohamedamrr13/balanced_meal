@@ -6,7 +6,7 @@ import 'package:balanced_meal/features/auth/presentation/register_screen.dart';
 import 'package:balanced_meal/features/home/presentation/home_screen.dart';
 import 'package:balanced_meal/features/onboarding/presentation/onboarding_page.dart';
 import 'package:balanced_meal/features/order/presentation/create_order_page.dart';
-import 'package:balanced_meal/features/order/presentation/saved_meals.dart';
+import 'package:balanced_meal/features/order/presentation/saved_meals_screen.dart';
 import 'package:balanced_meal/features/user_details/presentation/user_details_page.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';

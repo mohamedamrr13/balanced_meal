@@ -1,4 +1,5 @@
 import 'package:balanced_meal/core/models/user_data_model.dart';
+import 'package:balanced_meal/core/providers/auth_provider.dart';
 import 'package:balanced_meal/core/utils/calorie_calculator.dart';
 import 'package:balanced_meal/core/widgets/app_button.dart';
 import 'package:balanced_meal/core/widgets/app_dropdown.dart';
@@ -97,7 +98,9 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         age: age,
       );
 
-      await context.read<AuthProvider>().saveUserData(userData);
+      await context
+          .read<AuthProvider>()
+          .saveUserData(userData, context.read<AppStateProvider>());
 
       if (mounted) {
         if (_isExistingUser) {

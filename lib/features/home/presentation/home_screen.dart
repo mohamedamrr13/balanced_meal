@@ -98,15 +98,6 @@ class HomePage extends StatelessWidget {
                   icon: Icons.bookmark,
                   onTap: () => context.push('/saved-meals'),
                 ),
-                const SizedBox(height: 20),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: AppButton(
-                    text: 'Reset All Data',
-                    onPressed: () => _showResetDataDialog(context),
-                    backgroundColor: Colors.red[400],
-                  ),
-                ),
                 const SizedBox(height: 40),
               ],
             ),
