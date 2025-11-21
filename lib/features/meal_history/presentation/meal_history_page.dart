@@ -5,15 +5,7 @@ import 'package:balanced_meal/core/models/user_data_model.dart';
 import 'package:balanced_meal/core/models/saved_meal_model.dart';
 import 'package:balanced_meal/core/services/firestore_service.dart';
 import 'package:balanced_meal/core/widgets/empty_state.dart';
-import 'package:balanced_meal/core/widgets/shimmer_loading.dart';
 
-/// Meal history page displaying statistics and charts for saved meals.
-///
-/// Shows visual insights including:
-/// - Calorie trends over time
-/// - Category distribution
-/// - Average meal metrics
-/// - Daily calorie tracking
 class MealHistoryPage extends StatelessWidget {
   const MealHistoryPage({super.key});
 
@@ -43,9 +35,7 @@ class MealHistoryPage extends StatelessWidget {
           if (snapshot.hasError) {
             return ErrorState(
               message: 'Failed to load meal history: ${snapshot.error}',
-              onRetry: () {
-                // Trigger rebuild
-              },
+              onRetry: () {},
             );
           }
 
@@ -55,7 +45,7 @@ class MealHistoryPage extends StatelessWidget {
             return const EmptySavedMealsState();
           }
 
-          return _MealHistoryContent(
+          return MealHistoryContent(
             meals: meals,
             userData: userData,
           );
@@ -65,11 +55,12 @@ class MealHistoryPage extends StatelessWidget {
   }
 }
 
-class _MealHistoryContent extends StatelessWidget {
+class MealHistoryContent extends StatelessWidget {
   final List<SavedMealModel> meals;
   final UserDataModel? userData;
 
-  const _MealHistoryContent({
+  const MealHistoryContent({
+    super.key,
     required this.meals,
     this.userData,
   });
@@ -83,20 +74,13 @@ class _MealHistoryContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Summary Cards
-          _SummaryCards(stats: stats),
+          SummaryCards(stats: stats),
           const SizedBox(height: 24),
-
-          // Calorie Trend Chart
-          _CalorieTrendChart(meals: meals, userData: userData),
+          CalorieTrendChart(meals: meals, userData: userData),
           const SizedBox(height: 24),
-
-          // Category Distribution
-          _CategoryDistributionChart(meals: meals),
+          CategoryDistributionChart(meals: meals),
           const SizedBox(height: 24),
-
-          // Recent Meals List
-          _RecentMealsList(meals: meals.take(5).toList()),
+          RecentMealsList(meals: meals.take(5).toList()),
         ],
       ),
     );
@@ -130,10 +114,10 @@ class _MealHistoryContent extends StatelessWidget {
   }
 }
 
-class _SummaryCards extends StatelessWidget {
+class SummaryCards extends StatelessWidget {
   final Map<String, dynamic> stats;
 
-  const _SummaryCards({required this.stats});
+  const SummaryCards({super.key, required this.stats});
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +134,7 @@ class _SummaryCards extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _StatCard(
+              child: StatCard(
                 title: 'Total Meals',
                 value: '${stats['totalMeals']}',
                 icon: Icons.restaurant_menu,
@@ -159,7 +143,7 @@ class _SummaryCards extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: _StatCard(
+              child: StatCard(
                 title: 'Avg Calories',
                 value: '${stats['avgCalories']}',
                 subtitle: 'per meal',
@@ -174,14 +158,15 @@ class _SummaryCards extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
+class StatCard extends StatelessWidget {
   final String title;
   final String value;
   final String? subtitle;
   final IconData icon;
   final Color color;
 
-  const _StatCard({
+  const StatCard({
+    super.key,
     required this.title,
     required this.value,
     this.subtitle,
@@ -231,11 +216,12 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _CalorieTrendChart extends StatelessWidget {
+class CalorieTrendChart extends StatelessWidget {
   final List<SavedMealModel> meals;
   final UserDataModel? userData;
 
-  const _CalorieTrendChart({
+  const CalorieTrendChart({
+    super.key,
     required this.meals,
     this.userData,
   });
@@ -243,8 +229,6 @@ class _CalorieTrendChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-
-    // Get last 7 meals for the chart
     final recentMeals = meals.take(7).toList().reversed.toList();
     final bmr = userData?.bmr ?? 2000;
 
@@ -346,7 +330,6 @@ class _CalorieTrendChart extends StatelessWidget {
                 ),
                 borderData: FlBorderData(show: false),
                 lineBarsData: [
-                  // Meal calories line
                   LineChartBarData(
                     spots: recentMeals.asMap().entries.map((entry) {
                       return FlSpot(
@@ -363,7 +346,6 @@ class _CalorieTrendChart extends StatelessWidget {
                       color: theme.colorScheme.primary.withOpacity(0.1),
                     ),
                   ),
-                  // BMR target line
                   if (userData != null)
                     LineChartBarData(
                       spots: List.generate(
@@ -386,16 +368,15 @@ class _CalorieTrendChart extends StatelessWidget {
   }
 }
 
-class _CategoryDistributionChart extends StatelessWidget {
+class CategoryDistributionChart extends StatelessWidget {
   final List<SavedMealModel> meals;
 
-  const _CategoryDistributionChart({required this.meals});
+  const CategoryDistributionChart({super.key, required this.meals});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    // Calculate category distribution
     final categoryCount = <String, int>{};
     for (final meal in meals) {
       for (final item in meal.items) {
@@ -482,10 +463,10 @@ class _CategoryDistributionChart extends StatelessWidget {
   }
 }
 
-class _RecentMealsList extends StatelessWidget {
+class RecentMealsList extends StatelessWidget {
   final List<SavedMealModel> meals;
 
-  const _RecentMealsList({required this.meals});
+  const RecentMealsList({super.key, required this.meals});
 
   @override
   Widget build(BuildContext context) {
@@ -501,16 +482,16 @@ class _RecentMealsList extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-        ...meals.map((meal) => _RecentMealCard(meal: meal)).toList(),
+        ...meals.map((meal) => RecentMealCard(meal: meal)).toList(),
       ],
     );
   }
 }
 
-class _RecentMealCard extends StatelessWidget {
+class RecentMealCard extends StatelessWidget {
   final SavedMealModel meal;
 
-  const _RecentMealCard({required this.meal});
+  const RecentMealCard({super.key, required this.meal});
 
   @override
   Widget build(BuildContext context) {

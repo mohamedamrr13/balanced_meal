@@ -7,6 +7,9 @@ import 'package:balanced_meal/features/auth/logic/google_cubit/google_cubit.dart
 import 'package:balanced_meal/features/auth/logic/login_cubit/login_cubit.dart';
 import 'package:balanced_meal/features/auth/presentation/widgets/custom_auth_appbar.dart';
 import 'package:balanced_meal/features/auth/presentation/widgets/google_sign_in_button.dart';
+import 'package:balanced_meal/features/auth/presentation/widgets/auth_header.dart';
+import 'package:balanced_meal/features/auth/presentation/widgets/auth_divider.dart';
+import 'package:balanced_meal/features/auth/presentation/widgets/auth_navigation_link.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -48,24 +51,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 32),
-                  // Welcome back section
-                  Text(
-                    'Welcome Back!',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontSize: 24,
-                      color: theme.colorScheme.onBackground,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Sign in to continue your healthy eating journey',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF959595),
-                    ),
+                  const AuthHeader(
+                    title: 'Welcome Back!',
+                    subtitle: 'Sign in to continue your healthy eating journey',
                   ),
                   const SizedBox(height: 32),
-
                   Container(
                     constraints:
                         const BoxConstraints(maxWidth: double.infinity),
@@ -118,14 +108,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                       value);
                                 },
                               ),
-
-                              // Forgot password link
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: TextButton(
-                                  onPressed: () {
-                                    // TODO: Implement forgot password
-                                  },
+                                  onPressed: () {},
                                   child: Text(
                                     'Forgot Password?',
                                     style: theme.textTheme.bodySmall?.copyWith(
@@ -135,7 +121,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ),
                               ),
-
                               const SizedBox(height: 24),
                               AppButton(
                                 onPressed: isEnabled
@@ -151,31 +136,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 text: 'Sign In',
                                 isLoading: state is LoginLoading,
                               ),
-
                               const SizedBox(height: 24),
-
-                              // Divider
-                              Row(
-                                children: [
-                                  const Expanded(child: Divider()),
-                                  Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 16),
-                                    child: Text(
-                                      'OR',
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color: const Color(0xFF959595),
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ),
-                                  const Expanded(child: Divider()),
-                                ],
-                              ),
-
+                              const AuthDivider(),
                               const SizedBox(height: 24),
-
                               BlocConsumer<GoogleCubit, GoogleState>(
                                 listener: (context, state) {
                                   if (state is GoogleLoading) {
@@ -208,45 +171,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                   );
                                 },
                               ),
-
                               const SizedBox(height: 32),
-
-                              // Sign up link
-                              Center(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      "Don't have an account? ",
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        color: const Color(0xFF959595),
-                                      ),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        context.go(AppRouter.signUpRoute);
-                                      },
-                                      style: TextButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 4),
-                                        minimumSize: Size.zero,
-                                        tapTargetSize:
-                                            MaterialTapTargetSize.shrinkWrap,
-                                      ),
-                                      child: Text(
-                                        'Sign Up',
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                          color: theme.colorScheme.primary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                              AuthNavigationLink(
+                                question: "Don't have an account? ",
+                                actionText: 'Sign Up',
+                                route: AppRouter.signUpRoute,
                               ),
-
                               const SizedBox(height: 32),
                             ],
                           );

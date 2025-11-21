@@ -3,7 +3,7 @@ import 'package:balanced_meal/features/auth/logic/login_cubit/login_cubit.dart';
 import 'package:balanced_meal/features/auth/logic/register_cubit/register_cubit.dart';
 import 'package:balanced_meal/features/auth/presentation/login_screen.dart';
 import 'package:balanced_meal/features/auth/presentation/register_screen.dart';
-import 'package:balanced_meal/features/home/presentation/home.dart';
+import 'package:balanced_meal/features/home/presentation/home_screen.dart';
 import 'package:balanced_meal/features/onboarding/presentation/onboarding_page.dart';
 import 'package:balanced_meal/features/order/presentation/create_order_page.dart';
 import 'package:balanced_meal/features/order/presentation/saved_meals.dart';
