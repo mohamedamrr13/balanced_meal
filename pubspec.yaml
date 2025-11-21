@@ -57,6 +57,18 @@ dependencies:
   # Utilities
   intl: ^0.20.2
 
+  # Charts & Visualization
+  fl_chart: ^0.68.0
+
+  # Shimmer loading effect
+  shimmer: ^3.0.0
+
+  # Share functionality
+  share_plus: ^7.2.1
+
+  # Lottie animations
+  lottie: ^3.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -77,7 +89,7 @@ flutter:
   assets:
     - assets/fonts/
     - assets/images/
-    - assets/icons/
+    - assets/
 
   # To add custom fonts to your application, add a fonts section here,
   # in this "flutter" section. Each entry in this list should have a

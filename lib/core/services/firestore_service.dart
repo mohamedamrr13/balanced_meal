@@ -1,102 +1,16 @@
 import 'package:balanced_meal/core/models/food_model.dart';
+import 'package:balanced_meal/core/models/saved_meal_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-class SavedMealItemModel {
-  final String id;
-  final String foodName;
-  final String imageUrl;
-  final int calories;
-  final int price;
-  final String category;
-  final int quantity;
-
-  const SavedMealItemModel({
-    required this.id,
-    required this.foodName,
-    required this.imageUrl,
-    required this.calories,
-    required this.price,
-    required this.category,
-    required this.quantity,
-  });
-
-  factory SavedMealItemModel.fromMap(Map<String, dynamic> data) {
-    return SavedMealItemModel(
-      id: data['id'] ?? '',
-      foodName: data['food_name'] ?? '',
-      imageUrl: data['image_url'] ?? '',
-      calories: data['calories'] ?? 0,
-      price: data['price'] ?? 0,
-      category: data['category'] ?? '',
-      quantity: data['quantity'] ?? 1,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'food_name': foodName,
-      'image_url': imageUrl,
-      'calories': calories,
-      'price': price,
-      'category': category,
-      'quantity': quantity,
-    };
-  }
-
-  int get totalCalories => calories * quantity;
-  int get totalPrice => price * quantity;
-}
-
-class SavedMealModel {
-  final String id;
-  final String mealName;
-  final List<SavedMealItemModel> items;
-  final int totalCalories;
-  final int totalPrice;
-  final DateTime savedAt;
-  final String userId;
-
-  const SavedMealModel({
-    required this.id,
-    required this.mealName,
-    required this.items,
-    required this.totalCalories,
-    required this.totalPrice,
-    required this.savedAt,
-    required this.userId,
-  });
-
-  factory SavedMealModel.fromFirestore(Map<String, dynamic> data, String id) {
-    final itemsData = data['items'] as List<dynamic>? ?? [];
-    final items = itemsData
-        .map((item) => SavedMealItemModel.fromMap(item as Map<String, dynamic>))
-        .toList();
-
-    return SavedMealModel(
-      id: id,
-      mealName: data['meal_name'] ?? '',
-      items: items,
-      totalCalories: data['total_calories'] ?? 0,
-      totalPrice: data['total_price'] ?? 0,
-      savedAt: (data['saved_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      userId: data['user_id'] ?? '',
-    );
-  }
-
-  Map<String, dynamic> toFirestore() {
-    return {
-      'meal_name': mealName,
-      'items': items.map((item) => item.toMap()).toList(),
-      'total_calories': totalCalories,
-      'total_price': totalPrice,
-      'saved_at': Timestamp.fromDate(savedAt),
-      'user_id': userId,
-    };
-  }
-}
-
+/// Service class for all Firestore database operations.
+///
+/// This class provides methods for:
+/// - Fetching food items by category
+/// - Managing saved meals (CRUD operations)
+/// - Toggling meal favorites
+/// - User data management
+/// - Analytics and statistics
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -161,6 +75,73 @@ class FirestoreService {
     } catch (e) {
       debugPrint('Error updating saved meal: $e');
       rethrow;
+    }
+  }
+
+  /// Toggles the favorite status of a saved meal.
+  ///
+  /// This method updates the `is_favorite` field in Firestore.
+  Future<void> toggleMealFavorite(String mealId, bool isFavorite) async {
+    try {
+      await _firestore
+          .collection('saved_meals')
+          .doc(mealId)
+          .update({'is_favorite': isFavorite});
+    } catch (e) {
+      debugPrint('Error toggling meal favorite: $e');
+      rethrow;
+    }
+  }
+
+  /// Gets only the favorite meals for a user.
+  ///
+  /// Returns a stream of meals where `is_favorite` is true.
+  Stream<List<SavedMealModel>> getFavoriteMeals(String userId) {
+    return _firestore
+        .collection('saved_meals')
+        .where('user_id', isEqualTo: userId)
+        .where('is_favorite', isEqualTo: true)
+        .orderBy('saved_at', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => SavedMealModel.fromFirestore(doc.data(), doc.id))
+            .toList());
+  }
+
+  /// Gets saved meals with pagination support.
+  ///
+  /// [userId] - The user ID to filter by
+  /// [limit] - Maximum number of meals to fetch
+  /// [lastDocument] - Last document from previous query (for pagination)
+  Future<({QueryDocumentSnapshot<Object?>? lastDoc, List meals})>
+      getSavedMealsPaginated({
+    required String userId,
+    int limit = 20,
+    DocumentSnapshot? lastDocument,
+  }) async {
+    try {
+      Query query = _firestore
+          .collection('saved_meals')
+          .where('user_id', isEqualTo: userId)
+          .orderBy('saved_at', descending: true)
+          .limit(limit);
+
+      if (lastDocument != null) {
+        query = query.startAfterDocument(lastDocument);
+      }
+
+      final snapshot = await query.get();
+      final meals = snapshot.docs
+          .map((doc) => SavedMealModel.fromFirestore(
+              doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+
+      final lastDoc = snapshot.docs.isNotEmpty ? snapshot.docs.last : null;
+
+      return (meals: meals, lastDoc: lastDoc);
+    } catch (e) {
+      debugPrint('Error getting paginated meals: $e');
+      return (meals: [], lastDoc: null);
     }
   }
 

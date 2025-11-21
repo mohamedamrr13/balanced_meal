@@ -1,5 +1,6 @@
 import 'package:balanced_meal/core/models/food_model.dart';
 import 'package:balanced_meal/core/models/meal_model.dart';
+import 'package:balanced_meal/core/models/saved_meal_model.dart';
 import 'package:balanced_meal/core/providers/app_state_providers.dart';
 import 'package:balanced_meal/core/providers/auth_provider.dart';
 import 'package:balanced_meal/core/services/firestore_service.dart';
@@ -9,8 +10,6 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/food_item_card.dart';
-
-
 
 class CreateMealPage extends StatefulWidget {
   const CreateMealPage({super.key});
@@ -23,6 +22,7 @@ class _CreateMealPageState extends State<CreateMealPage>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   final FirestoreService _firestoreService = FirestoreService();
   final Map<String, MealItem> _currentMeal = {};
+  final ScrollController _scrollController = ScrollController();
   final Map<String, bool> _addingStates =
       {}; // Track individual item loading states
   bool _isSaving = false;
@@ -59,6 +59,7 @@ class _CreateMealPageState extends State<CreateMealPage>
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _fabAnimationController.dispose();
     super.dispose();
   }
@@ -92,8 +93,11 @@ class _CreateMealPageState extends State<CreateMealPage>
       return;
     }
 
-    // Add small delay to show loading state
-    await Future.delayed(const Duration(milliseconds: 200));
+    // Store scroll position before adding item to prevent auto-scroll
+    final scrollPosition = _scrollController.hasClients ? _scrollController.offset : 0.0;
+
+    // Small delay to show loading state
+    await Future.delayed(const Duration(milliseconds: 150));
 
     if (mounted) {
       setState(() {
@@ -104,6 +108,13 @@ class _CreateMealPageState extends State<CreateMealPage>
           _fabAnimationController.forward();
         }
         _addingStates[item.id] = false;
+      });
+
+      // Restore scroll position after state update to prevent auto-scroll
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients && scrollPosition > 0) {
+          _scrollController.jumpTo(scrollPosition);
+        }
       });
 
       _updateTotals();
@@ -142,13 +153,73 @@ class _CreateMealPageState extends State<CreateMealPage>
         .updateMealTotals(totalCalories, totalPrice);
   }
 
-  void _clearMeal() {
-    setState(() {
-      _currentMeal.clear();
-      _addingStates.clear();
-    });
-    _fabAnimationController.reverse();
-    _updateTotals();
+  Future<void> _clearMeal() async {
+    final confirmed = await _showClearMealConfirmation();
+    if (confirmed == true) {
+      setState(() {
+        _currentMeal.clear();
+        _addingStates.clear();
+      });
+      _fabAnimationController.reverse();
+      _updateTotals();
+      _showSnackBar(
+        'Meal cleared successfully',
+        Colors.orange,
+        Icons.clear_all,
+      );
+    }
+  }
+
+  Future<bool?> _showClearMealConfirmation() async {
+    final theme = Theme.of(context);
+
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.warning_rounded,
+                color: Colors.red,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text('Clear Meal?'),
+          ],
+        ),
+        content: const Text(
+          'Are you sure you want to clear all items from your current meal? This action cannot be undone.',
+          style: TextStyle(height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSnackBar(String message, Color color, IconData icon) {
@@ -215,6 +286,9 @@ class _CreateMealPageState extends State<CreateMealPage>
                 price: mealItem.food.price,
                 category: mealItem.food.category,
                 quantity: mealItem.quantity,
+                protein: mealItem.food.protein,
+                carbs: mealItem.food.carbs,
+                fat: mealItem.food.fat,
               ))
           .toList();
 
@@ -258,6 +332,7 @@ class _CreateMealPageState extends State<CreateMealPage>
 
   Future<String?> _showMealNameDialog() async {
     final controller = TextEditingController();
+    final theme = Theme.of(context);
 
     return showDialog<String>(
       context: context,
@@ -303,6 +378,9 @@ class _CreateMealPageState extends State<CreateMealPage>
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              foregroundColor: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
@@ -605,6 +683,7 @@ class _CreateMealPageState extends State<CreateMealPage>
         children: [
           Expanded(
             child: SingleChildScrollView(
+              controller: _scrollController,
               child: Column(
                 children: [
                   _buildCurrentMealSection(),

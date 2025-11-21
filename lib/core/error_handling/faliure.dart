@@ -11,7 +11,6 @@ class Failure {
 class FirebaseErrorMapper {
   static Failure fromCode(String code) {
     switch (code) {
-      // 🔐 Authentication errors
       case "ERROR_EMAIL_ALREADY_IN_USE":
       case "account-exists-with-different-credential":
       case "email-already-in-use":
@@ -48,7 +47,6 @@ class FirebaseErrorMapper {
       case "invalid-email":
         return Failure(code: code, message: "Email address is invalid.");
 
-      // 📦 Firestore or General Firebase errors
       case "permission-denied":
         return Failure(
           code: code,

@@ -1,7 +1,4 @@
-// lib/features/user_details/presentation/user_details_page.dart
-import 'package:balanced_meal/core/models/user_data_model.dart'
-    show UserDataModel;
-import 'package:balanced_meal/core/providers/app_state_providers.dart';
+import 'package:balanced_meal/core/models/user_data_model.dart';
 import 'package:balanced_meal/core/providers/auth_provider.dart';
 import 'package:balanced_meal/core/utils/calorie_calculator.dart';
 import 'package:balanced_meal/core/widgets/app_button.dart';
@@ -10,6 +7,8 @@ import 'package:balanced_meal/core/widgets/app_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
+
+import '../../../core/providers/app_state_providers.dart';
 
 class UserDetailsPage extends StatefulWidget {
   const UserDetailsPage({super.key});
@@ -99,7 +98,6 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
         age: age,
       );
 
-      // Save to Firestore and update app state
       await context
           .read<AuthProvider>()
           .saveUserData(userData, context.read<AppStateProvider>());

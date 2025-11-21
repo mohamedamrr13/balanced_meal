@@ -1,6 +1,6 @@
-// lib/core/widgets/custom_drawer.dart
 import 'package:balanced_meal/core/models/user_data_model.dart';
 import 'package:balanced_meal/core/providers/app_state_providers.dart';
+import 'package:balanced_meal/core/providers/auth_provider.dart';
 import 'package:balanced_meal/core/providers/theme_provider.dart';
 import 'package:balanced_meal/core/routes/app_router.dart';
 import 'package:flutter/material.dart';
@@ -331,10 +331,15 @@ class CustomDrawer extends StatelessWidget {
           'Are you sure you want to logout? You\'ll need to sign in again to access your data.',
         ),
         actions: [
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.grey,
+              foregroundColor: Colors.white,
+            ),
           ),
+          const SizedBox(width: 8),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
@@ -365,7 +370,7 @@ class CustomDrawer extends StatelessWidget {
           children: [
             Icon(Icons.restaurant_menu),
             SizedBox(width: 12),
-            Text('About Balanced Meal'),
+            Text('About App'),
           ],
         ),
         content: const Column(
